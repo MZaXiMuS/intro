@@ -1,100 +1,100 @@
-﻿class JatekfaSzintek
+﻿class JatekFaSzintek
 {
-    Babu best;
+    Babu best, tempBab;
     int pont, alfa, beta;
     public static int melyseg = 6;
-    public static LinkedList<Babu>[] gyilokList = new LinkedList<Babu>[melyseg + 1];
-    public Boolean tudLepni()
+    public static LinkedList<GykListaElem>[] gyilokList = new LinkedList<GykListaElem>[melyseg + 1];
+    int i = 0; int j = 0;
+    public Boolean tudLepni() { return (best != null); }
+
+    public JatekFaSzintek(TablaCuccok T, int feher, int sz, int a, int b)
     {
-        return (best != null);
-    }
-    public JatekfaSzintek(int feher, int sz, int a, int b)
-    {
-        best = null; alfa = a; beta = b; Babu tempBab = null;
-        pont = (-feher) << 17;//* 100000;
-        Boolean EloszorGyilokLepesek = (gyilokList[sz] != null);
-        LinkedList<XY> gyklepve = new LinkedList<XY>();
-        LinkedListNode<Babu> gyilokTeszt = null;
-        if (EloszorGyilokLepesek) gyilokTeszt = gyilokList[sz].First; else if (sz > 1) gyilokList[sz] = new LinkedList<Babu>();
-        int i = 0; int j = 0;
-        while (i < 8)
+        Boolean PozElemez()
         {
-            if (EloszorGyilokLepesek)
-                do
+            switch (feher * T.tabla[i, j])
+            {
+                case 1: tempBab = new Gyalog(T, new XY(i, j), sz, alfa, beta); break;
+                case 2: tempBab = new Bastya(T, new XY(i, j), sz, alfa, beta); break;
+                case 3: tempBab = new Lo(T, new XY(i, j), sz, alfa, beta); break;
+                case 4: tempBab = new Futo(T, new XY(i, j), sz, alfa, beta); break;
+                case 5: tempBab = new Kiralyno(T, new XY(i, j), sz, alfa, beta); break;
+                case 6: tempBab = new Kiraly(T, new XY(i, j), sz, alfa, beta); break;
+                default: goto nemlepheto;
+            }
+            if (tempBab.hovaTud.Count > 0)
+            {
+                if (feher < 0) alfa = tempBab.alfa; else beta = tempBab.beta;
+                if ((feher == -1 && pont > tempBab.pont) || (feher == 1 && pont < tempBab.pont)) { pont = tempBab.pont; best = tempBab; }
+                if (tempBab.kilepni) i = 100; //alfabeta miatt kilepes                        
+                return true;
+            }
+            nemlepheto: return false;
+        }
+
+        best = null; alfa = a; beta = b; int tablaVege = 8;
+        pont = (-feher) << 17;//* 100000;                    
+        LinkedList<XY> gykLepve = new LinkedList<XY>();
+
+        if (sz > 1 && gyilokList[sz].Count > 0)
+        {
+            LinkedListNode<GykListaElem> gyilokTeszt = gyilokList[sz].First;
+            while (gyilokTeszt != null && i < 100)
+            {
+                GykListaElem bb = gyilokTeszt.Value;
+                if (T.tabla[bb.honnan.x, bb.honnan.y] == bb.bsz && T.tabla[bb.hova.x, bb.hova.y] * feher <= 0)
                 {
-                    if (gyilokTeszt == null) { i = 0; j = 0; EloszorGyilokLepesek = false; } //++gyklep>50
+                    i = bb.honnan.x; j = bb.honnan.y;
+                    LinkedListNode<XY> gykBeszur = gykLepve.First;
+                    while (gykBeszur != null && gykBeszur.Value.x < i) gykBeszur = gykBeszur.Next;
+                    while (gykBeszur != null && gykBeszur.Value.x <= i && gykBeszur.Value.y < j) gykBeszur = gykBeszur.Next;
+                    if (gykBeszur == null) { gykLepve.AddLast(bb.honnan); PozElemez(); }
                     else
                     {
-                        Babu bb = gyilokTeszt.Value;
-                        if (tabla[bb.poz.x, bb.poz.y] == bb.babszam && tabla[bb.hovatud[bb.ponthol - 1].x, bb.hovatud[bb.ponthol - 1].y] * feher <= 0)
-                        {
-                            i = bb.poz.x; j = bb.poz.y;
-                            LinkedListNode<XY> gykBeszur = gyklepve.First;
-                            while (gykBeszur != null && gykBeszur.Value.x < i) gykBeszur = gykBeszur.Next;
-                            while (gykBeszur != null && gykBeszur.Value.x <= i && gykBeszur.Value.y < j) gykBeszur = gykBeszur.Next;
-                            if (gykBeszur == null) gyklepve.AddLast(new XY(i, j));
-                            else
-                            {
-                                if (gykBeszur.Value.y == j && gykBeszur.Value.x == i) i = -1;   // már néztük ezt a pozíciót de a listából mégse szedjük ki, hátha máshova lépve... // gyilokTeszt = gyilokTeszt.Previous; i = -1; // gyilokList[sz].Remove(gyilokTeszt.Next);                                                    
-                                else { gyklepve.AddBefore(gykBeszur, new XY(i, j)); }
-                            }
-                        }
-                        else i = -1; //ha nem léphető meg a gyilkos lépés, -1el jelzem 
-                        gyilokTeszt = gyilokTeszt.Next;
+                        if (gykBeszur.Value.y != j || gykBeszur.Value.x != i) { gykLepve.AddBefore(gykBeszur, bb.honnan); PozElemez(); }
                     }
-                } while (i < 0);
+                }
+                gyilokTeszt = gyilokTeszt.Next;
+            }
+            if (i < 100) { i = 0; j = 0; } //100=alfabéta találat a gyilkoslépések között
+        }
+        else /*if (sz == 1)  { i = T.cpu; tablavege = i + 1;}*/ if (sz == 1) { i = T.cpu * (8 / maxcpu); tablaVege = i + (8 / maxcpu); }
 
-            if (gyklepve.Count > 0 && !EloszorGyilokLepesek && XY.ee(gyklepve.First.Value, new XY(i, j)))
-                gyklepve.RemoveFirst();
+        while (i < tablaVege)
+        {
+            if (gykLepve.Count > 0 && XY.ee(gykLepve.First.Value, new XY(i, j))) gykLepve.RemoveFirst();
             else
             {
-                switch (feher * tabla[i, j])
-                {
-                    case 1: tempBab = new Gyalog(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    case 2: tempBab = new Bastya(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    case 3: tempBab = new Lo(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    case 4: tempBab = new Futo(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    case 5: tempBab = new Kiralyno(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    case 6: tempBab = new Kiraly(tabla[i, j], new XY(i, j), sz, alfa, beta); break;
-                    default: goto nemlepheto; //hogy ne kelljen tempBab létrehozni majd null ellenőrizni = gyorsabb?
-                }
-                if (tempBab.hovatud.Count > 0)
-                {
-                    if (feher < 0) alfa = tempBab.alfa; else beta = tempBab.beta;
-                    if ((feher == -1 && pont > tempBab.pont) || (feher == 1 && pont < tempBab.pont)) { pont = tempBab.pont; best = tempBab; }
-                    if (tempBab.kilepni) i = 100; //alfabeta miatt kilepes
-                    if (!EloszorGyilokLepesek && sz > 1) //&& kvn(gyilokminmaxpont[sz], tempBab.pont))
-                    {
-                        LinkedListNode<Babu> gyili = gyilokList[sz].First;
-                        if (gyili == null) gyilokList[sz].AddFirst(tempBab);
-                        else
+                if (PozElemez())
+                    if (sz > 1) lock (gyilokList[sz])
                         {
-                            int gyk = 0;
-                            while (gyili != null && ++gyk < 41)
-                                if ((feher == -1 && gyili.Value.pont > tempBab.pont) || (feher == 1 && gyili.Value.pont < tempBab.pont))
-                                {
-                                    gyilokList[sz].AddBefore(gyili, tempBab); gyk = 150;                                    
-                                }
-                                else gyili = gyili.Next;
-                            if (gyk < 30) gyilokList[sz].AddLast(tempBab);
-                        }                        
-                    }
-                }
-            nemlepheto:;
+                            LinkedListNode<GykListaElem> gyili = gyilokList[sz].First;
+                            if (gyili == null || (((feher == -1 && gyili.Value.pont >= tempBab.pont) || (feher == 1 && gyili.Value.pont <= tempBab.pont))))
+                            { gyilokList[sz].AddFirst(new GykListaElem(tempBab.babszam, tempBab.poz, tempBab.hovaTud[tempBab.ponthol - 1], tempBab.pont)); }
+                            else
+                            {
+                                int gyk = 0; gyili = gyilokList[sz].Last;
+                                while ((feher == -1 && gyili.Value.pont > tempBab.pont) || (feher == 1 && gyili.Value.pont < tempBab.pont))
+                                { gyili = gyili.Previous; ++gyk; }
+                                if (gyilokList[sz].Count - gyk < 35)
+                                { gyilokList[sz].AddAfter(gyili, new GykListaElem(tempBab.babszam, tempBab.poz, tempBab.hovaTud[tempBab.ponthol - 1], tempBab.pont)); }
+                            }
+                        }
             }
-            if (!EloszorGyilokLepesek && ++j > 7) { ++i; j = 0; }
+            if (++j > 7) { ++i; j = 0; }
         }
+
         if (best == null && sz > 1)
         {
-            XY k = kiralypoz[feher == 1 ? 1 : 0];
-            if (tutimezo(k.x, k.y, feher)) //patt?
+            XY k = T.kiralypoz[feher == 1 ? 1 : 0];
+            if (tutimezo(T, k.x, k.y, feher)) //patt?
             {
-                if (tablanbabukerteke * feher > 40) pont = tablanbabukerteke - feher * 40;
+                if (T.tablanbabukerteke * feher > 40) pont = T.tablanbabukerteke - feher * 40;
                 else //ha jól állunk, ne legyen patt
-                if (tablanbabukerteke * feher < -40) pont = tablanbabukerteke + feher * 40;
+                if (T.tablanbabukerteke * feher < -40) pont = T.tablanbabukerteke + feher * 40;
             }
         }
-        //catch (ArgumentOutOfRangeException e) catch kapta el az alfabétát, de már nem :D                 
+        //catch (ArgumentOutOfRangeException e) catch kapta el az alfabétát, de már nem :D     //if (sz == 1) T.ido = sw.Elapsed.TotalSeconds.ToString();
     }
-    public JatekfaSzintek(int feher) : this(feher, 0, 100000, -100000) { }
+    public JatekFaSzintek(TablaCuccok T, int feher) : this(T, feher, 0, 100000, -100000) { }
 }
+// ... 
